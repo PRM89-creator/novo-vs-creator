@@ -21,7 +21,7 @@ jobs:
             libstdc++6 libgtk-3-dev libffi-dev \
             libssl-dev libsqlite3-dev zlib1g-dev \
             libjpeg-dev libfreetype6-dev libncurses5-dev \
-            libbz2-dev libreadline-dev
+            libbz2-dev liblzma-dev
 
       - name: Instalar Cython e Buildozer
         run: |
@@ -34,17 +34,14 @@ jobs:
           mkdir -p $HOME/.buildozer/android/platform
           cd $HOME/.buildozer/android/platform
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip
+          unzip cmdline-tools.zip -d cmdline-tools-temp
           mkdir -p cmdline-tools/latest
-          mv cmdline-tools/* cmdline-tools/latest/
+          mv cmdline-tools-temp/cmdline-tools/* cmdline-tools/latest/
           yes | cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform \
             "platform-tools" "platforms;android-31" "build-tools;33.0.2" "ndk;25.1.8937393" "cmdline-tools;latest"
 
       - name: Compilar APK com Buildozer
         run: |
-          export ANDROIDSDK="$HOME/.buildozer/android/platform"
-          export ANDROIDNDK="$ANDROIDSDK/ndk/25.1.8937393"
-          export PATH="$ANDROIDSDK/platform-tools:$ANDROIDSDK/cmdline-tools/latest/bin:$PATH"
           buildozer android debug
 
       - name: Fazer upload do APK
