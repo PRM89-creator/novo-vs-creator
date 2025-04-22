@@ -50,6 +50,10 @@ jobs:
           echo "$HOME/.buildozer/android/platform/build-tools/33.0.2" >> $GITHUB_PATH
           echo "$HOME/.buildozer/android/platform/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
+      - name: Link simbólico para o aidl
+        run: |
+          ln -s $HOME/.buildozer/android/platform/build-tools/33.0.2/aidl $HOME/.buildozer/android/platform/cmdline-tools/latest/bin/aidl
+
       - name: Compilar APK com Buildozer
         run: |
           buildozer android debug
