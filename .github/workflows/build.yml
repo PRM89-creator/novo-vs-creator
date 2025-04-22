@@ -1,4 +1,4 @@
-name: Build APK com Buildozer
+name: Build VS Creator APK
 
 on:
   push:
@@ -14,38 +14,36 @@ jobs:
       - name: Checkout do repositório
         uses: actions/checkout@v4
 
-      - name: Instalar dependências
-        run: |
-          sudo apt update
-          sudo apt install -y zip unzip openjdk-17-jdk python3-pip \
-            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
-            zlib1g-dev libgl1-mesa-dev libgles2-mesa-dev xclip xsel libjpeg-dev curl
-
-          pip install --upgrade pip
-          pip install cython buildozer
-
       - name: Instalar Android SDK e AIDL
         run: |
           mkdir -p $HOME/android-sdk
           curl -s https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -o cmdline-tools.zip
-          unzip -q cmdline-tools.zip -d $HOME/android-sdk
+          unzip -q cmdline-tools.zip -d $HOME/android-sdk/temp-tools
           mkdir -p $HOME/android-sdk/cmdline-tools/latest
-          mv $HOME/android-sdk/cmdline-tools/* $HOME/android-sdk/cmdline-tools/latest/
+          mv $HOME/android-sdk/temp-tools/cmdline-tools/* $HOME/android-sdk/cmdline-tools/latest/
+          
           yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk \
             "platform-tools" "platforms;android-31" "build-tools;33.0.2"
 
-          echo "export ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "export PATH=$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
-          echo "export PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "PATH=$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
+          echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Conceder permissão de execução ao gradlew
+        run: chmod +x ./gradlew
 
       - name: Compilar APK com Buildozer
-        run: |
-          buildozer android debug
+        run: ./gradlew assembleRelease
 
       - name: Fazer upload do APK
         uses: actions/upload-artifact@v4
         with:
           name: vs-creator-apk
-          path: bin/*.apk
+          path: app/build/outputs/apk/release/app-release.apk
           
