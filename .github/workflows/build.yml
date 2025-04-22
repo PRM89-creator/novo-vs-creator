@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout do repositório
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Instalar dependências
         run: |
@@ -32,7 +32,7 @@ jobs:
           buildozer android debug
 
       - name: Upload do APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vscreator-apk
           path: bin/*.apk
