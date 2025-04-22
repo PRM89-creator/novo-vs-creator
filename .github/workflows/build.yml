@@ -1,4 +1,4 @@
-name: Build APK with Buildozer
+name: Build APK
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    name: Compilar APK com Buildozer
     runs-on: ubuntu-latest
 
     steps:
@@ -17,41 +18,22 @@ jobs:
       - name: Instalar dependências
         run: |
           sudo apt update
-          sudo apt install -y \
-            python3-pip \
-            zip \
-            openjdk-11-jdk \
-            git \
-            build-essential \
-            libncurses5 \
-            libstdc++6 \
-            libffi-dev \
-            libssl-dev \
-            libsqlite3-dev \
-            zlib1g-dev \
-            libjpeg-dev \
-            libfreetype6-dev \
-            libpng-dev \
-            pkg-config \
-            unzip \
-            curl \
-            liblzma-dev
-          pip install --upgrade pip setuptools
+          sudo apt install -y python3-pip zip unzip openjdk-17-jdk
+          python3 -m pip install --upgrade pip
           pip install buildozer cython virtualenv
 
-      - name: Criar ambiente virtual
+      - name: Configurar variáveis de ambiente Android
         run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
+          echo "export PATH=$HOME/.buildozer/android/platform/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
+          echo "export PATH=$HOME/.buildozer/android/platform/android-sdk/tools:$PATH" >> $GITHUB_ENV
 
-      - name: Compilar APK com Buildozer
+      - name: Criar APK com Buildozer
         run: |
-          source venv/bin/activate
           buildozer android debug
 
       - name: Upload do APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.3
         with:
           name: vscreator-apk
           path: bin/*.apk
+          
