@@ -1,0 +1,1 @@
+# Buildozer spec configurado para Android 14

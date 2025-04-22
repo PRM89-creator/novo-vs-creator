@@ -1,1 +1,3 @@
-# novo-vs-creator
+# VS Creator
+
+Este é o projeto VS Creator pronto para ser compilado via GitHub Actions...
