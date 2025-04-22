@@ -4,35 +4,38 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   build:
-    name: Compilar APK com Buildozer
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout do repositório
-        uses: actions/checkout@v4
+      - name: Checkout código
+        uses: actions/checkout@v3
 
       - name: Instalar dependências
         run: |
           sudo apt update
-          sudo apt install -y python3-pip zip unzip openjdk-17-jdk
+          sudo apt install -y python3-pip zip unzip openjdk-17-jdk wget
           python3 -m pip install --upgrade pip
           pip install buildozer cython virtualenv
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip -d $HOME/.android/
+          mkdir -p $HOME/.android/cmdline-tools/latest
+          mv $HOME/.android/cmdline-tools/cmdline-tools/* $HOME/.android/cmdline-tools/latest/
+          yes | $HOME/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.android "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       - name: Configurar variáveis de ambiente Android
         run: |
-          echo "export PATH=$HOME/.buildozer/android/platform/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
-          echo "export PATH=$HOME/.buildozer/android/platform/android-sdk/tools:$PATH" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$HOME/.android" >> $GITHUB_ENV
+          echo "PATH=$HOME/.android/platform-tools:$HOME/.android/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Criar APK com Buildozer
+      - name: Construir APK com Buildozer
         run: |
           buildozer android debug
 
-      - name: Upload do APK
-        uses: actions/upload-artifact@v4
+      - name: Fazer upload do APK
+        uses: actions/upload-artifact@v3
         with:
           name: vscreator-apk
           path: bin/*.apk
