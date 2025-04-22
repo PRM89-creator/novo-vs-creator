@@ -46,7 +46,12 @@ log_level = 2
 warn_on_root = 1
 
 # (str) Android SDK version to use
-android.api = 33
+# CORRIGIDO PARA EVITAR ERRO DE AIDL
+android.api = 30
+
+# (str) Android build tools version
+# CORRIGIDO PARA USAR UMA VERSÃO QUE TEM O AIDL PRESENTE
+android.build_tools_version = 30.0.3
 
 # (str) Android NDK version to use
 android.ndk = 25b
