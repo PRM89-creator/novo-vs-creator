@@ -50,7 +50,7 @@ jobs:
           source venv/bin/activate
           buildozer android debug
 
-      - name: Fazer upload do APK
+      - name: Upload do APK
         uses: actions/upload-artifact@v3
         with:
           name: vscreator-apk
