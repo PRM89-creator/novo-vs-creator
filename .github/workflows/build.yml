@@ -17,9 +17,16 @@ jobs:
       - name: Instalar dependências
         run: |
           sudo apt update
-          sudo apt install -y python3-pip zip unzip openjdk-17-jdk
-          pip3 install --upgrade pip
-          pip3 install buildozer cython
+          sudo apt install -y zip unzip openjdk-17-jdk python3-pip \
+            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
+            zlib1g-dev libgl1-mesa-dev libgles2-mesa-dev xclip xsel libjpeg-dev
+          pip install --upgrade pip
+          pip install cython buildozer
+
+      - name: Instalar AIDL manualmente
+        run: |
+          yes | sdkmanager "build-tools;33.0.2"
 
       - name: Compilar APK com Buildozer
         run: |
@@ -30,3 +37,4 @@ jobs:
         with:
           name: vs-creator-apk
           path: bin/*.apk
+          
