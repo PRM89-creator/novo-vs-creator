@@ -1,34 +1,36 @@
-name: Build VS Creator
+name: Build VS Creator APK
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout do repositório
-      uses: actions/checkout@v3
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
 
-    - name: Configurar JDK 17
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Configurar ambiente Android
-      uses: android-actions/setup-android@v2
+      - name: Configurar ambiente Android
+        uses: android-actions/setup-android@v2
 
-    - name: Construir APK
-      run: ./gradlew assembleRelease
+      - name: Conceder permissão de execução ao gradlew
+        run: chmod +x ./gradlew
 
-    - name: Fazer upload do APK
-      uses: actions/upload-artifact@v3
-      with:
-        name: vs-creator-apk
-        path: app/build/outputs/apk/release/app-release.apk
-        
+      - name: Construir APK
+        run: ./gradlew assembleRelease
+
+      - name: Fazer upload do APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: vs-creator-apk
+          path: app/build/outputs/apk/release/app-release.apk
