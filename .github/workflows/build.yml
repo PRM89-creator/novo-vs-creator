@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -21,15 +21,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y python3-pip zip unzip openjdk-11-jdk
+          sudo apt install -y zip unzip openjdk-11-jdk python3-pip libffi-dev libssl-dev \
+            libsqlite3-dev zlib1g-dev libncurses5-dev libncursesw5-dev libreadline-dev \
+            libgdbm-dev libbz2-dev libexpat1-dev liblzma-dev patchelf git
           pip install --upgrade pip
           pip install buildozer cython
 
       - name: Build APK
         run: |
-          sudo apt install -y git zip unzip openjdk-11-jdk python3-pip libffi-dev libssl-dev \
-            libsqlite3-dev zlib1g-dev libncurses5-dev libncursesw5-dev libreadline-dev \
-            libgdbm-dev libbz2-dev libexpat1-dev liblzma-dev patchelf
           buildozer android debug
 
       - name: Upload APK
@@ -37,3 +36,4 @@ jobs:
         with:
           name: vs-creator-apk
           path: bin/*.apk
+          
