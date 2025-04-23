@@ -39,5 +39,4 @@ jobs:
         with:
           name: vscreator-apk
           path: bin/*.apk
-
-Cole esse conteúdo no seu repositório, dentro do arquivo .github/workflows/build.yml.
+          
