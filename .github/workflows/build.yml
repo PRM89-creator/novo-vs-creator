@@ -43,7 +43,7 @@ jobs:
           buildozer android debug
 
       - name: Fazer upload do APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.3
         with:
           name: app-debug.apk
           path: bin/*.apk
