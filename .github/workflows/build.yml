@@ -42,7 +42,7 @@ jobs:
         buildozer android debug
 
     - name: Fazer upload do APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: vscreator-apk
         path: bin/*.apk
