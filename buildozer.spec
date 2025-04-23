@@ -1,85 +1,79 @@
 [app]
 
-# (str) Title of your application
+# Nome do app
 title = VS Creator
 
-# (str) Package name
+# Nome do pacote
 package.name = vscreator
 
-# (str) Package domain (needed for android/ios packaging)
+# Domínio reverso
 package.domain = org.creator
 
-# (str) Source code where the main.py is located
+# Código-fonte
 source.dir = .
 
-# (str) Application versioning
+# Versão do app
 version = 1.0.0
 
-# (str) Application entry point
+# Arquivo principal
 entrypoint = main.py
 
-# (list) Permissions
+# Permissões Android
 android.permissions = INTERNET
 
-# (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
+# Orientação da tela
 orientation = portrait
 
-# (bool) Indicate if the application should be fullscreen or not
+# Tela cheia
 fullscreen = 1
 
-# (list) Supported platforms
+# Arquiteturas suportadas
 android.archs = armeabi-v7a, arm64-v8a
 
-# (str) Icon of the application
+# Ícone do app
 icon.filename = %(source.dir)s/icon.png
 
-# (list) Application requirements
+# Requisitos de dependências
 requirements = python3,kivy
 
-# (str) Presplash of the application
+# Tela de carregamento
 presplash.filename = %(source.dir)s/presplash.png
 
-# (str) Supported orientation
-orientation = portrait
-
-# (bool) Android logcat filters to use
+# Filtros de log do logcat
 logcat_filters = *:S python:D
 
-# (bool) Copy library instead of making a libpymodules.so
+# Copiar libs (necessário para algumas builds)
 android.copy_libs = 1
 
 
 [buildozer]
 
-# (str) Target platform
+# Plataforma de destino
 target = android
 
-# (str) Log level (0 = error only, 1 = warning, 2 = info, 3 = debug, 4 = trace)
+# Nível de log
 log_level = 2
 
-# (bool) Display warning if buildozer is run as root (default: 1)
+# Aviso se rodar como root
 warn_on_root = 1
 
-# (str) Android SDK version to use
+# API do Android (SDK)
 android.api = 30
 
-# (str) Android build tools version
+# Build Tools com suporte ao AIDL
 android.build_tools_version = 30.0.3
 
-# (str) Android NDK version to use
+# NDK compatível com o Buildozer
 android.ndk = 25b
 
-# (str) Android entry point, default is ok
+# Atividade de entrada (padrão do Kivy)
 android.entrypoint = org.kivy.android.PythonActivity
 
-# (str) Android app theme, supported themes are: 'light', 'dark', or custom.
+# Tema da interface
 android.theme = 'light'
 
-# (str) Path to build artifact storage, optional (default: .buildozer)
-# build_dir = .buildozer
-
-# (str) Path to the .gradle folder used to store gradle caches (default: ~/.gradle)
+# Diretório de cache da Gradle (mantém padrão)
 # android.gradle_cache_dir =
 
-# (bool) Use --private data storage (True) or --dir public storage (False)
+# Armazenamento privado (mantém dados internos)
 android.private_storage = True
