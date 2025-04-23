@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,19 +17,25 @@ jobs:
       - name: Instalar dependências
         run: |
           sudo apt update
-          sudo apt install -y python3-pip zip unzip openjdk-17-jdk wget
+          sudo apt install -y python3-pip zip unzip openjdk-17-jdk wget libncurses5 libffi-dev libssl-dev libsqlite3-dev zlib1g-dev
           python3 -m pip install --upgrade pip
-          pip install buildozer cython virtualenv
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip -d $HOME/.android/
-          mkdir -p $HOME/.android/cmdline-tools/latest
-          mv $HOME/.android/cmdline-tools/cmdline-tools/* $HOME/.android/cmdline-tools/latest/
-          yes | $HOME/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.android "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          pip install cython virtualenv
+          pip install buildozer
 
-      - name: Configurar variáveis de ambiente Android
+      - name: Baixar SDK Android
         run: |
+          mkdir -p $HOME/.android/cmdline-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip -d $HOME/.android/cmdline-tools
+          mv $HOME/.android/cmdline-tools/cmdline-tools $HOME/.android/cmdline-tools/latest
+          yes | $HOME/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.android "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+
+      - name: Configurar variáveis de ambiente
+        run: |
+          echo "ANDROIDSDK=$HOME/.android" >> $GITHUB_ENV
           echo "ANDROID_HOME=$HOME/.android" >> $GITHUB_ENV
-          echo "PATH=$HOME/.android/platform-tools:$HOME/.android/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
+          echo "$HOME/.android/platform-tools" >> $GITHUB_PATH
+          echo "$HOME/.android/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
       - name: Construir APK com Buildozer
         run: |
