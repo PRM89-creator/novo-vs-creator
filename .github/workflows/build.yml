@@ -1,8 +1,9 @@
-name: Build VS Creator APK
+name: Build APK com Buildozer
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -10,51 +11,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
+    - name: Clonar repositório
+      uses: actions/checkout@v3
 
-      - name: Instalar dependências do sistema e Buildozer
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            build-essential \
-            ccache \
-            git \
-            zip \
-            unzip \
-            openjdk-11-jdk \
-            python3-pip \
-            python3-dev \
-            libffi-dev \
-            libssl-dev \
-            libnss3 \
-            libncurses5 \
-            libstdc++6 \
-            zlib1g:i386 \
-            libncurses5:i386 \
-            libstdc++6:i386 \
-            libz1:i386 \
-            libbz2-1.0:i386
+    - name: Instalar dependências
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip git zip unzip openjdk-17-jdk
+        pip install --upgrade pip
+        pip install buildozer cython
 
-          pip install --upgrade pip
-          pip install cython
-          pip install buildozer
+    - name: Compilar APK com Buildozer
+      run: |
+        buildozer android debug
 
-      - name: Instalar SDK Android e AIDL
-        run: |
-          mkdir -p ~/.android
-          yes | sdkmanager --licenses || true
-          sudo apt install -y android-sdk
-          export PATH=$PATH:/usr/lib/android-sdk/platform-tools:/usr/lib/android-sdk/tools
-          sdkmanager "platforms;android-31" "build-tools;31.0.0" "platform-tools"
-
-      - name: Compilar APK com Buildozer
-        run: |
-          buildozer android debug
-
-      - name: Fazer upload do APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: vscreator-apk
-          path: bin/*.apk
-          
+    - name: Upload APK gerado
+      uses: actions/upload-artifact@v3
+      with:
+        name: vscreator-apk
+        path: bin/*.apk
+        
