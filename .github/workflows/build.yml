@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Clonar repositório
-      uses: actions/checkout@v4  # Atualizado para v4
+      uses: actions/checkout@v4
 
     - name: Instalar dependências
       run: |
@@ -21,11 +21,11 @@ jobs:
         pip install --upgrade pip setuptools
         pip install buildozer cython==0.29.36
 
-    - name: Configurar Buildozer
+    - name: Limpar espaço em disco
       run: |
-        buildozer init
-        # Adicione aqui qualquer comando de configuração adicional se necessário
-        # Exemplo: sed -i 's/#android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
+        sudo apt clean
+        sudo rm -rf /usr/local/lib/android/sdk/emulator/
+        df -h
 
     - name: Compilar APK com Buildozer
       run: |
@@ -33,7 +33,7 @@ jobs:
         ls -la bin/
 
     - name: Upload APK gerado
-      uses: actions/upload-artifact@v4  # Atualizado para v4
+      uses: actions/upload-artifact@v4
       with:
         name: vscreator-apk
         path: bin/*.apk
