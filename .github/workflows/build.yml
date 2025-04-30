@@ -11,29 +11,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Clonar repositório
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
     - name: Instalar dependências
       run: |
         sudo apt update
-        sudo apt install -y python3-pip git zip unzip openjdk-17-jdk libffi-dev
+        sudo apt install -y python3-pip git zip unzip openjdk-17-jdk libffi-dev zlib1g-dev
         pip install --upgrade pip setuptools
         pip install buildozer cython==0.29.36
 
-    - name: Limpar espaço em disco
+    - name: Configurar ambiente Android
+      run: |
+        mkdir -p ~/.android
+        touch ~/.android/repositories.cfg
+        echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+
+    - name: Limpar espaço
       run: |
         sudo apt clean
         sudo rm -rf /usr/local/lib/android/sdk/emulator/
         df -h
 
-    - name: Compilar APK com Buildozer
+    - name: Compilar APK
       run: |
-        buildozer -v android debug
+        buildozer -v android debug 2>&1 | tee buildozer.log
+        cat buildozer.log
         ls -la bin/
 
-    - name: Upload APK gerado
+    - name: Upload APK
       uses: actions/upload-artifact@v4
+      if: success()
       with:
-        name: vscreator-apk
+        name: app-debug
         path: bin/*.apk
