@@ -18,7 +18,7 @@ jobs:
         sudo apt update
         sudo apt install -y python3-pip git zip unzip openjdk-17-jdk libffi-dev zlib1g-dev libssl-dev
         pip install --upgrade pip setuptools wheel
-        pip install buildozer cython==0.29.36
+        pip install buildozer cython==0.29.36 kivy==2.3.0
 
     - name: Configurar ambiente Android
       run: |
@@ -33,18 +33,25 @@ jobs:
         sudo rm -rf /usr/local/lib/android/sdk/tools/
         df -h
 
+    - name: Configurar Buildozer
+      run: |
+        buildozer init
+        sed -i 's/#android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
+        sed -i 's/android.arch =/android.archs =/' buildozer.spec  # Corrige deprecated warning
+
     - name: Compilar APK
       id: build-apk
       run: |
-        # Força a geração do APK mesmo com warnings
+        # Força a geração mesmo com warnings
         buildozer -v android debug 2>&1 | tee buildozer.log || true
         
-        # Localiza o APK em qualquer subdiretório
+        # Busca o APK em qualquer subdiretório
         APK_PATH=$(find . -name "*.apk" -type f | head -n1)
         
         if [ -z "$APK_PATH" ]; then
-          echo "::error::Nenhum APK encontrado! Verifique os logs:"
+          echo "::error::Nenhum APK encontrado! Logs completos:"
           cat buildozer.log
+          find . -name "build.log" -exec cat {} \;
           exit 1
         else
           echo "APK encontrado em: ${APK_PATH}"
