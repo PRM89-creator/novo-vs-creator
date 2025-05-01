@@ -2,119 +2,28 @@ name: Build APK com Buildozer
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Configurar ambiente
+    - name: Instalar dependências
       run: |
-        sudo DEBIAN_FRONTEND=noninteractive apt-get -qq update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get -qq install -y \
-          python3-pip git zip unzip openjdk-17-jdk libffi-dev zlib1g-dev libssl-dev unzip
-        python3 -m pip install --quiet --upgrade pip setuptools wheel
-        python3 -m pip install --quiet buildozer cython==0.29.36 kivy==2.3.0
-
-    - name: Configurar Android SDK/NDK
-      run: |
-        mkdir -p ~/.android
-        touch ~/.android/repositories.cfg
-        echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
-        echo "ndk.dir=/usr/local/lib/android/sdk/ndk/25b" >> local.properties
-
-    - name: Pré-download de dependências
-      run: |
-        mkdir -p ~/.buildozer/android/platform
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O ~/.buildozer/android/platform/android-sdk.zip
-        wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip -O ~/.buildozer/android/platform/android-ndk.zip
-        wget -q https://archive.apache.org/dist/ant/binaries/apache-ant-1.9.4-bin.tar.gz -O ~/.buildozer/android/platform/apache-ant.tar.gz
-
-    - name: Preparar buildozer.spec
-      run: |
-        # Criar backup do arquivo original
-        cp buildozer.spec buildozer.spec.bak
-        
-        # Processar o arquivo para remover duplicações
-        awk '
-        BEGIN { in_buildozer = 0 }
-        /^\[buildozer\]/ {
-          if (!in_buildozer) {
-            in_buildozer = 1
-            print
-          }
-          next
-        }
-        /^\[/ {
-          in_buildozer = 0
-          print
-          next
-        }
-        !in_buildozer || /^android\./ {
-          print
-        }
-        END {
-          if (!in_buildozer) {
-            print "[buildozer]"
-          }
-          print "log_level = 2"
-          print "android.sdk_version = 33"
-          print "android.ndk_version = 25b"
-          print "android.archs = armeabi-v7a,arm64-v8a"
-          print "p4a.branch = develop"
-          print "android.accept_sdk_license = True"
-        }' buildozer.spec.bak > buildozer.spec
-
-        echo "=== CONFIGURAÇÃO FINAL ==="
-        cat buildozer.spec
+        sudo apt update
+        sudo apt install -y python3-pip openjdk-17-jdk libffi-dev
+        pip install buildozer cython==0.29.36
 
     - name: Compilar APK
-      id: build-apk
-      run: |
-        set -exo pipefail
-        
-        # Configurar ambiente
-        export P4A_RELEASE_KEYSTORE=~/.keystore
-        export P4A_RELEASE_KEYSTORE_PASSWD=android
-        export P4A_RELEASE_KEYALIAS_PASSWD=android
-        export P4A_RELEASE_KEYALIAS=androiddebugkey
-        
-        # Extrair dependências pré-baixadas
-        unzip -q ~/.buildozer/android/platform/android-sdk.zip -d ~/.buildozer/android/platform/android-sdk
-        unzip -q ~/.buildozer/android/platform/android-ndk.zip -d ~/.buildozer/android/platform
-        tar -xzf ~/.buildozer/android/platform/apache-ant.tar.gz -C ~/.buildozer/android/platform
-        
-        # Clone manual do python-for-android
-        git clone -b develop --depth 1 https://github.com/kivy/python-for-android.git ~/.buildozer/android/platform/python-for-android
-        
-        # Build com timeout aumentado
-        timeout 35m buildozer -v android debug 2>&1 | tee buildozer.log || true
-        
-        # Verificar resultado
-        APK_PATH=$(find . -name "*.apk" -type f | head -n1)
-        if [ -f "$APK_PATH" ]; then
-          echo "::notice::✅ APK gerado em: ${APK_PATH}"
-          mkdir -p deployment
-          cp "$APK_PATH" deployment/app-debug.apk
-          echo "apk_path=deployment/app-debug.apk" >> $GITHUB_OUTPUT
-        else
-          echo "::error::❌ Falha na compilação"
-          echo "=== ERROS DETECTADOS ==="
-          grep -A 15 -B 5 -i "error\|fail\|exception" buildozer.log || true
-          echo "=== ARQUIVO BUILD.SPEC ==="
-          cat buildozer.spec
-          exit 1
-        fi
+      run: buildozer -v android debug
 
     - name: Upload APK
-      if: steps.build-apk.outputs.apk_path
       uses: actions/upload-artifact@v4
       with:
         name: vscreator-app
-        path: ${{ steps.build-apk.outputs.apk_path }}
+        path: bin/*.apk
