@@ -1,4 +1,4 @@
-name: Build APK com Buildozer
+name: Build APK
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45  # Aumentado para builds mais complexos
+    timeout-minutes: 45
 
     steps:
     - uses: actions/checkout@v4
@@ -21,9 +21,10 @@ jobs:
           openjdk-17-jdk \
           libffi-dev \
           zlib1g-dev \
-          unzip
+          unzip \
+          ffmpeg
         python3 -m pip install --quiet --upgrade pip setuptools wheel
-        python3 -m pip install --quiet buildozer cython==0.29.36 kivy==2.3.0
+        python3 -m pip install --quiet buildozer cython==0.29.36
 
     - name: Configurar ambiente Android
       run: |
@@ -31,31 +32,19 @@ jobs:
         touch ~/.android/repositories.cfg
         echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
 
-    - name: Limpar espaço
+    - name: Limpar cache
       run: |
         sudo apt-get clean
         sudo rm -rf /var/lib/apt/lists/*
-        df -h
 
     - name: Compilar APK
-      id: build
       run: |
         buildozer -v android debug 2>&1 | tee build.log
-        
-        # Verifica se o APK foi gerado
-        APK_PATH=$(find . -name "*.apk" -type f | head -n1)
-        if [ -z "$APK_PATH" ]; then
-          echo "::error::Nenhum APK encontrado!"
-          cat build.log
-          exit 1
-        fi
-        
-        echo "APK gerado em: ${APK_PATH}"
-        echo "apk_path=${APK_PATH}" >> $GITHUB_OUTPUT
+        ls -la bin/
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: vscreator-app
-        path: ${{ steps.build.outputs.apk_path }}
+        path: bin/*.apk
         if-no-files-found: error
