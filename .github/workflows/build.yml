@@ -13,12 +13,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Instalar dependências
+    - name: Instalar dependências (modo seguro)
       run: |
-        sudo apt update
-        sudo apt install -y python3-pip git zip unzip openjdk-17-jdk libffi-dev zlib1g-dev libssl-dev
-        pip install --upgrade pip setuptools wheel
-        pip install buildozer cython==0.29.36 kivy==2.3.0
+        sudo DEBIAN_FRONTEND=noninteractive apt-get -qq update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get -qq install -y \
+          python3-pip git zip unzip openjdk-17-jdk libffi-dev zlib1g-dev libssl-dev
+        python3 -m pip install --quiet --upgrade pip setuptools wheel
+        python3 -m pip install --quiet buildozer cython==0.29.36 kivy==2.3.0
 
     - name: Configurar ambiente Android
       run: |
@@ -28,35 +29,41 @@ jobs:
 
     - name: Limpar espaço
       run: |
-        sudo apt clean
+        sudo apt-get clean
         sudo rm -rf /usr/local/lib/android/sdk/emulator/
         sudo rm -rf /usr/local/lib/android/sdk/tools/
         df -h
 
-    - name: Configurar Buildozer
+    - name: Preparar buildozer.spec
       run: |
-        buildozer init
+        if [ ! -f buildozer.spec ]; then
+          buildozer init
+        fi
         sed -i 's/#android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
-        sed -i 's/android.arch =/android.archs =/' buildozer.spec  # Corrige deprecated warning
+        sed -i 's/android.arch =/android.archs =/' buildozer.spec
+        cat buildozer.spec
 
     - name: Compilar APK
       id: build-apk
       run: |
-        # Força a geração mesmo com warnings
-        buildozer -v android debug 2>&1 | tee buildozer.log || true
+        # Força modo verbose e captura logs
+        buildozer -v android debug > >(tee -a buildozer.log) 2> >(tee -a buildozer.err >&2) || true
         
-        # Busca o APK em qualquer subdiretório
-        APK_PATH=$(find . -name "*.apk" -type f | head -n1)
+        # Busca inteligente do APK
+        APK_PATH=$(find . -path "*bin/*.apk" -type f | head -n1)
+        [ -z "$APK_PATH" ] && APK_PATH=$(find . -name "*.apk" -type f | head -n1)
         
         if [ -z "$APK_PATH" ]; then
-          echo "::error::Nenhum APK encontrado! Logs completos:"
+          echo "::error::❌ Nenhum APK encontrado!"
+          echo "=== LOG DE ERRO ==="
+          cat buildozer.err
+          echo "=== LOG COMPLETO ==="
           cat buildozer.log
-          find . -name "build.log" -exec cat {} \;
           exit 1
         else
-          echo "APK encontrado em: ${APK_PATH}"
+          echo "::notice::✅ APK gerado em: ${APK_PATH}"
           mkdir -p deployment
-          cp "${APK_PATH}" deployment/app-debug.apk
+          cp "$APK_PATH" deployment/app-debug.apk
           echo "apk_path=deployment/app-debug.apk" >> $GITHUB_OUTPUT
         fi
 
