@@ -16,8 +16,8 @@ jobs:
     - name: Instalar dependências
       run: |
         sudo apt update
-        sudo apt install -y python3-pip git zip unzip openjdk-17-jdk libffi-dev zlib1g-dev
-        pip install --upgrade pip setuptools
+        sudo apt install -y python3-pip git zip unzip openjdk-17-jdk libffi-dev zlib1g-dev libssl-dev
+        pip install --upgrade pip setuptools wheel
         pip install buildozer cython==0.29.36
 
     - name: Configurar ambiente Android
@@ -30,17 +30,32 @@ jobs:
       run: |
         sudo apt clean
         sudo rm -rf /usr/local/lib/android/sdk/emulator/
+        sudo rm -rf /usr/local/lib/android/sdk/tools/
         df -h
 
     - name: Compilar APK
+      id: build-apk
       run: |
-        buildozer -v android debug 2>&1 | tee buildozer.log
-        cat buildozer.log
-        ls -la bin/
+        # Força a geração do APK mesmo com warnings
+        buildozer -v android debug 2>&1 | tee buildozer.log || true
+        
+        # Localiza o APK em qualquer subdiretório
+        APK_PATH=$(find . -name "*.apk" -type f | head -n1)
+        
+        if [ -z "$APK_PATH" ]; then
+          echo "::error::Nenhum APK encontrado! Verifique os logs:"
+          cat buildozer.log
+          exit 1
+        else
+          echo "APK encontrado em: ${APK_PATH}"
+          mkdir -p deployment
+          cp "${APK_PATH}" deployment/app-debug.apk
+          echo "apk_path=deployment/app-debug.apk" >> $GITHUB_OUTPUT
+        fi
 
     - name: Upload APK
+      if: steps.build-apk.outputs.apk_path
       uses: actions/upload-artifact@v4
-      if: success()
       with:
         name: app-debug
-        path: bin/*.apk
+        path: ${{ steps.build-apk.outputs.apk_path }}
