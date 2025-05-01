@@ -6,14 +6,14 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,mp3,wav,ogg
 version = 1.0
 
-# Dependências otimizadas para Android
 requirements = 
     python3==3.9.13,
     kivy==2.3.0,
     numpy==1.26.4,
     android,
-    audioread==3.0.1,  # Alternativa mais leve que librosa
-    pydub==0.25.1
+    audioread==3.0.1,
+    pydub==0.25.1,
+    ffmpeg-python==0.2.0
 
 orientation = portrait
 fullscreen = 1
@@ -31,7 +31,12 @@ android.ndk_api = 21
 android.archs = armeabi-v7a,arm64-v8a
 p4a.branch = develop
 
-# Configurações essenciais para processamento de áudio
+# Configurações de build otimizadas
+android.allow_backup = False
+android.verbose = True
+android.enable_androidx = True
+
+# Bibliotecas nativas
 android.add_libs_armeabi_v7a = libffmpeg.so
 android.add_libs_arm64_v8a = libffmpeg.so
 
