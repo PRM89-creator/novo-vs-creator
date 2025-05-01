@@ -1,4 +1,4 @@
-name: Build and Upload APK
+name: Build APK
 
 on:
   push:
@@ -13,12 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-
-    - name: Install system dependencies
+    - name: Setup environment
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y --no-install-recommends \
@@ -26,7 +21,6 @@ jobs:
           libffi-dev \
           zlib1g-dev \
           unzip \
-          ffmpeg \
           git
 
     - name: Install Python dependencies
@@ -34,28 +28,19 @@ jobs:
         python -m pip install --upgrade pip
         pip install buildozer cython==0.29.36
 
-    - name: Setup python-for-android
+    - name: Accept Android licenses
       run: |
-        mkdir -p ~/.buildozer/android/platform
-        git clone -b develop --depth 1 https://github.com/kivy/python-for-android.git ~/.buildozer/android/platform/python-for-android
+        mkdir -p ~/.android
+        touch ~/.android/repositories.cfg
+        yes | ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
 
     - name: Build APK
-      id: build-apk
       run: |
         buildozer -v android debug 2>&1 | tee build.log
-        
-        APK_PATH=$(find . -name "*.apk" -type f | head -n1)
-        if [ -z "$APK_PATH" ]; then
-          echo "::error::APK not found!"
-          cat build.log
-          exit 1
-        fi
-        
-        echo "APK found at: ${APK_PATH}"
-        echo "apk_path=${APK_PATH}" >> $GITHUB_OUTPUT
+        find . -name "*.apk" -type f
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: vscreator-app
-        path: ${{ steps.build-apk.outputs.apk_path }}
+        path: bin/*.apk
