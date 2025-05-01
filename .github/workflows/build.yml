@@ -19,54 +19,50 @@ jobs:
         sudo DEBIAN_FRONTEND=noninteractive apt-get -qq install -y \
           python3-pip git zip unzip openjdk-17-jdk libffi-dev zlib1g-dev libssl-dev
         python3 -m pip install --quiet --upgrade pip setuptools wheel
-        python3 -m pip install --quiet buildozer cython==0.29.36
+        python3 -m pip install --quiet buildozer cython==0.29.36 kivy==2.3.0
 
-    - name: Configurar Android
+    - name: Configurar Android SDK
       run: |
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
         echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
 
-    - name: Limpeza de espaço
-      run: |
-        sudo apt-get clean
-        sudo rm -rf /usr/local/lib/android/sdk/emulator/
-        df -h
-
     - name: Preparar buildozer.spec
       run: |
-        # Forçar arquiteturas modernas
+        # Atualizar para formato moderno
         sed -i 's/android.arch =/android.archs =/' buildozer.spec
         sed -i 's/p4a.branch = master/p4a.branch = kivy/' buildozer.spec
-        echo "=== buildozer.spec ==="
+        sed -i 's/android.sdk = .*/android.sdk_version = 33/' buildozer.spec
+        echo "=== CONFIGURAÇÃO ATUALIZADA ==="
         cat buildozer.spec
 
-    - name: Compilar APK
+    - name: Compilar APK (com fallback)
       id: build-apk
       run: |
-        set -x  # Modo debug ativado
+        set -ex
         
-        # Instalar dependências exatas do projeto
-        pip install kivy==2.3.0
+        # Solução definitiva para o python-for-android
+        export P4A_RELEASE_KEYSTORE=~/.keystore
+        export P4A_RELEASE_KEYSTORE_PASSWD=android
+        export P4A_RELEASE_KEYALIAS_PASSWD=android
+        export P4A_RELEASE_KEYALIAS=androiddebugkey
         
-        # Build com log detalhado
-        buildozer -v android debug > >(tee buildozer.log) 2> >(tee buildozer.err >&2) || true
+        # Build com tratamento robusto de erros
+        buildozer android debug 2>&1 | tee buildozer.log || true
         
-        # Localizar APK
-        APK_PATH=$(find . -name "*.apk" -type f | head -n1)
+        # Localização inteligente do APK
+        APK_PATH=$(find . -path "*bin/*.apk" -type f | head -n1)
+        [ -z "$APK_PATH" ] && APK_PATH=$(find . -name "*.apk" -type f | head -n1)
         
-        if [ -z "$APK_PATH" ]; then
-          echo "::error::❌ Falha na compilação!"
-          echo "=== ERROS ==="
-          cat buildozer.err
-          echo "=== LOG COMPLETO ==="
-          cat buildozer.log
-          exit 1
-        else
-          echo "::notice::✅ APK gerado em: ${APK_PATH}"
+        if [ -f "$APK_PATH" ]; then
+          echo "::notice::✅ APK gerado com sucesso!"
           mkdir -p deployment
           cp "$APK_PATH" deployment/app-debug.apk
           echo "apk_path=deployment/app-debug.apk" >> $GITHUB_OUTPUT
+        else
+          echo "::error::❌ Falha na compilação. Logs:"
+          cat buildozer.log
+          exit 1
         fi
 
     - name: Upload APK
