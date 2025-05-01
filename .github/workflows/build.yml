@@ -29,25 +29,21 @@ jobs:
         echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
         echo "ndk.dir=/usr/local/lib/android/sdk/ndk/25b" >> local.properties
 
-    - name: Limpeza de espaço
-      run: |
-        sudo apt-get clean
-        sudo rm -rf /usr/local/lib/android/sdk/emulator/
-        sudo rm -rf /usr/local/lib/android/sdk/tools/
-        df -h
-
     - name: Preparar buildozer.spec
       run: |
-        # Forçar configurações modernas
+        # Remover comentários problemáticos
+        sed -i 's/#.*//' buildozer.spec
+        
+        # Configurações modernas
         sed -i 's/android.arch =/android.archs =/' buildozer.spec
-        sed -i 's/p4a.branch = master/p4a.branch = 2024.05.06/' buildozer.spec
+        sed -i 's/p4a.branch = .*/p4a.branch = develop/' buildozer.spec
         sed -i 's/android.sdk = .*/android.sdk_version = 33/' buildozer.spec
         sed -i 's/android.ndk = .*/android.ndk_version = 25b/' buildozer.spec
         
-        echo "=== CONFIGURAÇÃO VERIFICADA ==="
-        grep -E 'android.(archs|sdk_version|ndk_version)' buildozer.spec
+        echo "=== CONFIG VERIFICADA ==="
+        grep -E 'android.(archs|sdk_version|ndk_version|p4a.branch)' buildozer.spec
 
-    - name: Compilar APK (com fallback completo)
+    - name: Compilar APK
       id: build-apk
       run: |
         set -exo pipefail
@@ -58,35 +54,32 @@ jobs:
         export P4A_RELEASE_KEYALIAS_PASSWD=android
         export P4A_RELEASE_KEYALIAS=androiddebugkey
         
-        # Limpar builds anteriores
-        rm -rf .buildozer/android/platform/build-*/{build,dists}
+        # Clone manual do python-for-android
+        mkdir -p .buildozer/android/platform
+        git clone -b develop --single-branch https://github.com/kivy/python-for-android.git .buildozer/android/platform/python-for-android
         
         # Build com timeout
         timeout 25m buildozer -v android debug 2>&1 | tee buildozer.log || true
         
-        # Verificar erros críticos
+        # Verificar erros
         if grep -q "Failed to execute the last command" buildozer.log; then
-          echo "::error::❌ Erro crítico durante a compilação"
-          echo "=== ERROS DETECTADOS ==="
+          echo "::error::❌ Erro durante a compilação"
+          echo "=== ERROS ENCONTRADOS ==="
           grep -A 10 -B 5 -i "error\|fail\|exception" buildozer.log || true
           exit 1
         fi
 
-        # Busca inteligente do APK
-        APK_PATH=$(find . -path "*bin/*.apk" -type f | head -n1)
-        [ -z "$APK_PATH" ] && APK_PATH=$(find . -name "*.apk" -type f | head -n1)
-        
+        # Busca do APK
+        APK_PATH=$(find . -name "*.apk" -type f | head -n1)
         if [ -f "$APK_PATH" ]; then
           echo "::notice::✅ APK gerado em: ${APK_PATH}"
           mkdir -p deployment
           cp "$APK_PATH" deployment/app-debug.apk
           echo "apk_path=deployment/app-debug.apk" >> $GITHUB_OUTPUT
         else
-          echo "::error::❌ Falha na geração do APK"
-          echo "=== LOGS DE ERRO ==="
+          echo "::error::❌ Nenhum APK encontrado após compilação"
+          echo "=== ÚLTIMOS 100 LOGS ==="
           tail -n 100 buildozer.log
-          echo "=== ARQUIVOS DE BUILD ==="
-          find .buildozer -name "*.log" -exec tail -n20 {} \;
           exit 1
         fi
 
