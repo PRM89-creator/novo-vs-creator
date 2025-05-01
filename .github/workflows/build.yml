@@ -1,4 +1,4 @@
-name: Build APK
+name: Build and Upload APK
 
 on:
   push:
@@ -8,43 +8,53 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Instalar dependências
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install system dependencies
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y --no-install-recommends \
-          python3-pip \
           openjdk-17-jdk \
           libffi-dev \
           zlib1g-dev \
           unzip \
-          ffmpeg
-        python3 -m pip install --quiet --upgrade pip setuptools wheel
-        python3 -m pip install --quiet buildozer cython==0.29.36
+          ffmpeg \
+          libavcodec-extra
 
-    - name: Configurar ambiente Android
+    - name: Install Python dependencies
       run: |
-        mkdir -p ~/.android
-        touch ~/.android/repositories.cfg
-        echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+        python -m pip install --upgrade pip
+        pip install buildozer cython==0.29.36
 
-    - name: Limpar cache
+    - name: Build APK
+      id: build-apk
       run: |
-        sudo apt-get clean
-        sudo rm -rf /var/lib/apt/lists/*
-
-    - name: Compilar APK
-      run: |
+        buildozer android clean
         buildozer -v android debug 2>&1 | tee build.log
-        ls -la bin/
+        
+        # Find APK recursively
+        APK_PATH=$(find . -name "*.apk" -type f | head -n1)
+        if [ -z "$APK_PATH" ]; then
+          echo "::error::APK not found!"
+          echo "=== Build Log ==="
+          cat build.log
+          exit 1
+        fi
+        
+        echo "APK found at: ${APK_PATH}"
+        echo "apk_path=${APK_PATH}" >> $GITHUB_OUTPUT
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: vscreator-app
-        path: bin/*.apk
-        if-no-files-found: error
+        path: ${{ steps.build-apk.outputs.apk_path }}
+        retention-days: 7
