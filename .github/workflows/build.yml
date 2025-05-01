@@ -9,11 +9,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Configurar ambiente
+    - name: Configurar ambiente básico
       run: |
         sudo DEBIAN_FRONTEND=noninteractive apt-get -qq update
         sudo DEBIAN_FRONTEND=noninteractive apt-get -qq install -y \
@@ -21,47 +22,66 @@ jobs:
         python3 -m pip install --quiet --upgrade pip setuptools wheel
         python3 -m pip install --quiet buildozer cython==0.29.36 kivy==2.3.0
 
-    - name: Configurar Android SDK
+    - name: Configurar Android SDK/NDK
       run: |
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
         echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+        echo "ndk.dir=/usr/local/lib/android/sdk/ndk/25b" >> local.properties
+
+    - name: Limpeza de espaço
+      run: |
+        sudo apt-get clean
+        sudo rm -rf /usr/local/lib/android/sdk/emulator/
+        sudo rm -rf /usr/local/lib/android/sdk/tools/
+        df -h
 
     - name: Preparar buildozer.spec
       run: |
-        # Atualizar para formato moderno
+        # Garantir configurações modernas
         sed -i 's/android.arch =/android.archs =/' buildozer.spec
         sed -i 's/p4a.branch = master/p4a.branch = kivy/' buildozer.spec
         sed -i 's/android.sdk = .*/android.sdk_version = 33/' buildozer.spec
-        echo "=== CONFIGURAÇÃO ATUALIZADA ==="
-        cat buildozer.spec
+        sed -i 's/android.ndk = .*/android.ndk_version = 25b/' buildozer.spec
+        
+        echo "=== CONFIG VERIFICADA ==="
+        grep -E 'android.(archs|sdk_version|ndk_version)' buildozer.spec
 
-    - name: Compilar APK (com fallback)
+    - name: Compilar APK (com fallback completo)
       id: build-apk
       run: |
-        set -ex
+        set -exo pipefail
         
-        # Solução definitiva para o python-for-android
+        # Configurações críticas de ambiente
+        export BUILD_FAILURE=0
         export P4A_RELEASE_KEYSTORE=~/.keystore
         export P4A_RELEASE_KEYSTORE_PASSWD=android
         export P4A_RELEASE_KEYALIAS_PASSWD=android
         export P4A_RELEASE_KEYALIAS=androiddebugkey
         
-        # Build com tratamento robusto de erros
-        buildozer android debug 2>&1 | tee buildozer.log || true
+        # Execução com tratamento robusto de erros
+        timeout 20m buildozer -v android debug 2>&1 | tee buildozer.log || export BUILD_FAILURE=1
         
-        # Localização inteligente do APK
-        APK_PATH=$(find . -path "*bin/*.apk" -type f | head -n1)
-        [ -z "$APK_PATH" ] && APK_PATH=$(find . -name "*.apk" -type f | head -n1)
+        if [ $BUILD_FAILURE -ne 0 ]; then
+          echo "::warning::⚠️ Buildozer retornou erro, verificando logs..."
+          grep -i error buildozer.log || true
+        fi
+
+        # Busca inteligente do APK em múltiplos locais
+        APK_PATH=$(find . -name "*.apk" -type f | head -n1)
+        [ -z "$APK_PATH" ] && APK_PATH=$(find . -path "*bin/*.apk" -type f | head -n1)
         
         if [ -f "$APK_PATH" ]; then
-          echo "::notice::✅ APK gerado com sucesso!"
+          echo "::notice::✅ APK gerado em: ${APK_PATH}"
           mkdir -p deployment
           cp "$APK_PATH" deployment/app-debug.apk
           echo "apk_path=deployment/app-debug.apk" >> $GITHUB_OUTPUT
         else
-          echo "::error::❌ Falha na compilação. Logs:"
-          cat buildozer.log
+          echo "::error::❌ Falha crítica - Nenhum APK encontrado!"
+          echo "=== ÚLTIMOS 50 LINHAS DO LOG ==="
+          tail -n 50 buildozer.log
+          echo "=== ARQUIVOS GERADOS ==="
+          find .buildozer -type f | head -20
           exit 1
         fi
 
