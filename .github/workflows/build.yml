@@ -13,49 +13,51 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Instalar dependências (modo seguro)
+    - name: Configurar ambiente
       run: |
         sudo DEBIAN_FRONTEND=noninteractive apt-get -qq update
         sudo DEBIAN_FRONTEND=noninteractive apt-get -qq install -y \
           python3-pip git zip unzip openjdk-17-jdk libffi-dev zlib1g-dev libssl-dev
         python3 -m pip install --quiet --upgrade pip setuptools wheel
-        python3 -m pip install --quiet buildozer cython==0.29.36 kivy==2.3.0
+        python3 -m pip install --quiet buildozer cython==0.29.36
 
-    - name: Configurar ambiente Android
+    - name: Configurar Android
       run: |
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
         echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
 
-    - name: Limpar espaço
+    - name: Limpeza de espaço
       run: |
         sudo apt-get clean
         sudo rm -rf /usr/local/lib/android/sdk/emulator/
-        sudo rm -rf /usr/local/lib/android/sdk/tools/
         df -h
 
     - name: Preparar buildozer.spec
       run: |
-        if [ ! -f buildozer.spec ]; then
-          buildozer init
-        fi
-        sed -i 's/#android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
+        # Forçar arquiteturas modernas
         sed -i 's/android.arch =/android.archs =/' buildozer.spec
+        sed -i 's/p4a.branch = master/p4a.branch = kivy/' buildozer.spec
+        echo "=== buildozer.spec ==="
         cat buildozer.spec
 
     - name: Compilar APK
       id: build-apk
       run: |
-        # Força modo verbose e captura logs
-        buildozer -v android debug > >(tee -a buildozer.log) 2> >(tee -a buildozer.err >&2) || true
+        set -x  # Modo debug ativado
         
-        # Busca inteligente do APK
-        APK_PATH=$(find . -path "*bin/*.apk" -type f | head -n1)
-        [ -z "$APK_PATH" ] && APK_PATH=$(find . -name "*.apk" -type f | head -n1)
+        # Instalar dependências exatas do projeto
+        pip install kivy==2.3.0
+        
+        # Build com log detalhado
+        buildozer -v android debug > >(tee buildozer.log) 2> >(tee buildozer.err >&2) || true
+        
+        # Localizar APK
+        APK_PATH=$(find . -name "*.apk" -type f | head -n1)
         
         if [ -z "$APK_PATH" ]; then
-          echo "::error::❌ Nenhum APK encontrado!"
-          echo "=== LOG DE ERRO ==="
+          echo "::error::❌ Falha na compilação!"
+          echo "=== ERROS ==="
           cat buildozer.err
           echo "=== LOG COMPLETO ==="
           cat buildozer.log
@@ -71,5 +73,5 @@ jobs:
       if: steps.build-apk.outputs.apk_path
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
+        name: vscreator-app
         path: ${{ steps.build-apk.outputs.apk_path }}
